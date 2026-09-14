@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISstore</title>
+    <!-- Подключение библиотеки Telegram Web App API -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 15px; color: #1c1e21; }
+        
+        .header { text-align: center; margin-bottom: 20px; }
+        .header img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
+        .header h1 { margin: 10px 0 2px; font-size: 22px; color: #1e3a8a; }
+        .header p { margin: 0; font-size: 13px; color: #64748b; font-weight: 500; }
+        
+        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #e2e8f0; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; color: #475569; }
+        .tab-btn.active { background: #1e3a8a; color: #ffffff; }
+        
+        .product-card { background: #ffffff; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; }
+        .product-info { flex: 1; padding-right: 10px; }
+        .product-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #0f172a; }
+        .product-price { color: #2563eb; font-weight: 700; font-size: 14px; }
+        
+        .counter { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 8px; border-radius: 8px; }
+        .btn-qty { width: 28px; height: 28px; border: none; background: #2563eb; color: #ffffff; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .qty-val { font-weight: 700; font-size: 14px; min-width: 16px; text-align: center; }
+        
+        .footer-cart { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; padding: 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 16px; border-top-right-radius: 16px; }
+        .total-title { font-size: 12px; color: #64748b; }
+        .total-price { font-weight: 800; font-size: 18px; color: #0f172a; }
+        .checkout-btn { background: #16a34a; color: #ffffff; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <img src="https://i.ibb.co/L8v88x0/vis-logo.png" alt="VIS Logo">
+    <h1>VISstore</h1>
+    <p>VOSIQ INTERNATIONAL SCHOOL</p>
+</div>
+
+<div class="tabs">
+    <button class="tab-btn active" id="btn-boy" onclick="filterGender('boy')">👦 Мальчики</button>
+    <button class="tab-btn" id="btn-girl" onclick="filterGender('girl')">👧 Девочки</button>
+</div>
+
+<div id="product-list"></div>
+
+<div style="height: 80px;"></div>
+
+<div class="footer-cart">
+    <div>
+        <div class="total-title">Итого:</div>
+        <div class="total-price" id="total-price">0 сум</div>
+    </div>
+    <button class="checkout-btn" onclick="sendOrder()">✅ Оформить заказ</button>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // Каталог товаров VISstore
+    const products = [
+        { id: 1, gender: 'boy', title: '👕 Финка (короткий рукав, Белый)', price: 120000, qty: 0 },
+        { id: 2, gender: 'boy', title: '👕 Финка (короткий рукав, Тёмно-синий)', price: 120000, qty: 0 },
+        { id: 3, gender: 'boy', title: '👕 Финка (длинный рукав, Белый)', price: 130000, qty: 0 },
+        { id: 4, gender: 'boy', title: '👕 Финка (длинный рукав, Тёмно-синий)', price: 130000, qty: 0 },
+        { id: 5, gender: 'boy', title: '🧥 Пиджак (1-4 класс)', price: 400000, qty: 0 },
+        { id: 6, gender: 'boy', title: '🧥 Пиджак (5-11 класс)', price: 450000, qty: 0 },
+        { id: 7, gender: 'boy', title: '👖 Брюки мужские', price: 200000, qty: 0 },
+        { id: 8, gender: 'boy', title: '👔 Рубашка', price: 130000, qty: 0 },
+        { id: 9, gender: 'boy', title: '👔 Галстук', price: 0, qty: 0 },
+        { id: 10, gender: 'girl', title: '👕 Финка (короткий рукав, Белый)', price: 120000, qty: 0 },
+        { id: 11, gender: 'girl', title: '👕 Финка (длинный рукав, Белый)', price: 130000, qty: 0 },
+        { id: 12, gender: 'girl', title: '🧥 Пиджак женский (1-4 класс)', price: 400000, qty: 0 },
+        { id: 13, gender: 'girl', title: '🧥 Пиджак женский (5-11 класс)', price: 450000, qty: 0 },
+        { id: 14, gender: 'girl', title: '👔 Рубашка', price: 130000, qty: 0 }
+    ];
+
+    let currentGender = 'boy';
+
+    function renderProducts() {
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        
+        products.filter(p => p.gender === currentGender).forEach(p => {
+            const priceText = p.price > 0 ? `${p.price.toLocaleString()} сум` : 'Уточняется';
+            list.innerHTML += `
+                <div class="product-card">
+                    <div class="product-info">
+                        <div class="product-title">${p.title}</div>
+                        <div class="product-price">${priceText}</div>
+                    </div>
+                    <div class="counter">
+                        <button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button>
+                        <span class="qty-val">${p.qty}</span>
+                        <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+        updateTotal();
+    }
+
+    function filterGender(gender) {
+        currentGender = gender;
+        document.getElementById('btn-boy').classList.toggle('active', gender === 'boy');
+        document.getElementById('btn-girl').classList.toggle('active', gender === 'girl');
+        renderProducts();
+    }
+
+    function changeQty(id, delta) {
+        const product = products.find(p => p.id === id);
+        if (product) {
+            product.qty = Math.max(0, product.qty + delta);
+            renderProducts();
+        }
+    }
+
+    function updateTotal() {
+        const total = products.reduce((sum, p) => sum + (p.price * p.qty), 0);
+        document.getElementById('total-price').innerText = `${total.toLocaleString()} сум`;
+    }
+
+    function sendOrder() {
+        const cart = products.filter(p => p.qty > 0);
+        if (cart.length === 0) {
+            tg.showAlert("Пожалуйста, выберите хотя бы один товар!");
+            return;
+        }
+        tg.sendData(JSON.stringify(cart));
+    }
+
+    renderProducts();
+</script>
+</body>
+</html>

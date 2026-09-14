@@ -52,14 +52,16 @@
 
 <div class="user-form">
     <h3>📋 Контактные данные</h3>
-    <input type="text" id="cust-name" class="form-input" placeholder="Имя и Фамилия ученика/родителя" autocomplete="off">
-    <input type="tel" id="cust-phone" class="form-input" placeholder="Номер телефона (+998...)" autocomplete="off">
+    <input type="text" id="cust-name" class="form-input" placeholder="Имя и Фамилия ученика/родителя">
+    <input type="tel" id="cust-phone" class="form-input" placeholder="Номер телефона (+998...)">
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    let tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) {
+        tg.ready();
+        tg.expand();
+    }
 
     const products = [
         { id: 1, gender: 'boy', title: '👕 Поло/Финка', price: 120000, sizes: ['28', '30', '32', '34', '36', '38', '40', '42'], colors: ['Белый', 'Тёмно-синий'], size: '32', color: 'Белый', qty: 0 },
@@ -74,6 +76,12 @@
     ];
 
     let currentGender = 'boy';
+
+    // Заполнение контактов из Telegram если возможно
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const u = tg.initDataUnsafe.user;
+        document.getElementById('cust-name').value = (u.first_name + ' ' + (u.last_name || '')).trim();
+    }
 
     function renderProducts() {
         const list = document.getElementById('product-list');
@@ -140,6 +148,8 @@
     }
 
     function updateMainButton() {
+        if (!tg || !tg.MainButton) return;
+        
         const cart = products.filter(p => p.qty > 0);
         if (cart.length > 0) {
             const total = cart.reduce((sum, p) => sum + (p.price * p.qty), 0);
@@ -150,17 +160,17 @@
         }
     }
 
-    tg.MainButton.onClick(() => {
+    function sendDataToBot() {
         const cart = products.filter(p => p.qty > 0);
         const name = document.getElementById('cust-name').value.trim();
         const phone = document.getElementById('cust-phone').value.trim();
 
         if (cart.length === 0) {
-            tg.showAlert("Выберите хотя бы один товар!");
+            alert("Выберите хотя бы один товар!");
             return;
         }
         if (!name || !phone) {
-            tg.showAlert("Пожалуйста, заполните Имя и Номер телефона!");
+            alert("Пожалуйста, заполните Имя и Номер телефона!");
             return;
         }
 
@@ -175,8 +185,16 @@
             }))
         };
 
-        tg.sendData(JSON.stringify(payload));
-    });
+        if (tg) {
+            tg.sendData(JSON.stringify(payload));
+        } else {
+            alert("Заказ оформлен! (Тестовый режим вне Telegram)");
+        }
+    }
+
+    if (tg && tg.MainButton) {
+        tg.MainButton.onClick(sendDataToBot);
+    }
 
     renderProducts();
 </script>

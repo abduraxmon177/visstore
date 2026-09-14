@@ -2,29 +2,38 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>VISstore</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f8; margin: 0; padding: 15px; color: #1c1e21; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--tg-theme-bg-color, #f4f6f8); color: var(--tg-theme-text-color, #1c1e21); margin: 0; padding: 15px; padding-bottom: 90px; }
+        
         .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { margin: 10px 0 2px; font-size: 22px; color: #1e3a8a; }
+        .header h1 { margin: 5px 0 2px; font-size: 22px; color: #1e3a8a; }
         .header p { margin: 0; font-size: 13px; color: #64748b; font-weight: 500; }
+        
         .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: #e2e8f0; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; color: #475569; }
         .tab-btn.active { background: #1e3a8a; color: #ffffff; }
-        .product-card { background: #ffffff; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; }
-        .product-info { flex: 1; padding-right: 10px; }
-        .product-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #0f172a; }
-        .product-price { color: #2563eb; font-weight: 700; font-size: 14px; }
+        
+        .product-card { background: #ffffff; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .product-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .product-title { font-weight: 600; font-size: 15px; color: #0f172a; }
+        .product-price { color: #2563eb; font-weight: 700; font-size: 14px; white-space: nowrap; }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .option-group label { display: block; font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
+        .option-select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-size: 13px; color: #0f172a; outline: none; }
+        
+        .card-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px; }
         .counter { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 8px; border-radius: 8px; }
         .btn-qty { width: 28px; height: 28px; border: none; background: #2563eb; color: #ffffff; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .qty-val { font-weight: 700; font-size: 14px; min-width: 16px; text-align: center; }
-        .footer-cart { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; padding: 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 16px; border-top-right-radius: 16px; }
-        .total-title { font-size: 12px; color: #64748b; }
-        .total-price { font-weight: 800; font-size: 18px; color: #0f172a; }
-        .checkout-btn { background: #16a34a; color: #ffffff; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; }
+        
+        .user-form { background: #ffffff; border-radius: 14px; padding: 16px; margin-top: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .user-form h3 { margin: 0 0 12px; font-size: 15px; color: #1e3a8a; }
+        .form-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; font-size: 14px; outline: none; }
     </style>
 </head>
 <body>
@@ -40,14 +49,11 @@
 </div>
 
 <div id="product-list"></div>
-<div style="height: 80px;"></div>
 
-<div class="footer-cart">
-    <div>
-        <div class="total-title">Итого:</div>
-        <div class="total-price" id="total-price">0 сум</div>
-    </div>
-    <button class="checkout-btn" onclick="sendOrder()">✅ Оформить заказ</button>
+<div class="user-form">
+    <h3>📋 Контактные данные</h3>
+    <input type="text" id="cust-name" class="form-input" placeholder="Имя и Фамилия ученика/родителя" autocomplete="off">
+    <input type="tel" id="cust-phone" class="form-input" placeholder="Номер телефона (+998...)" autocomplete="off">
 </div>
 
 <script>
@@ -56,19 +62,15 @@
     tg.expand();
 
     const products = [
-        { id: 1, gender: 'boy', title: '👕 Финка (короткий рукав, Белый)', price: 120000, qty: 0 },
-        { id: 2, gender: 'boy', title: '👕 Финка (короткий рукав, Тёмно-синий)', price: 120000, qty: 0 },
-        { id: 3, gender: 'boy', title: '👕 Финка (длинный рукав, Белый)', price: 130000, qty: 0 },
-        { id: 4, gender: 'boy', title: '👕 Финка (длинный рукав, Тёмно-синий)', price: 130000, qty: 0 },
-        { id: 5, gender: 'boy', title: '🧥 Пиджак (1-4 класс)', price: 400000, qty: 0 },
-        { id: 6, gender: 'boy', title: '🧥 Пиджак (5-11 класс)', price: 450000, qty: 0 },
-        { id: 7, gender: 'boy', title: '👖 Брюки мужские', price: 200000, qty: 0 },
-        { id: 8, gender: 'boy', title: '👔 Рубашка', price: 130000, qty: 0 },
-        { id: 9, gender: 'girl', title: '👕 Финка (короткий рукав, Белый)', price: 120000, qty: 0 },
-        { id: 10, gender: 'girl', title: '👕 Финка (длинный рукав, Белый)', price: 130000, qty: 0 },
-        { id: 11, gender: 'girl', title: '🧥 Пиджак женский (1-4 класс)', price: 400000, qty: 0 },
-        { id: 12, gender: 'girl', title: '🧥 Пиджак женский (5-11 класс)', price: 450000, qty: 0 },
-        { id: 13, gender: 'girl', title: '👔 Рубашка', price: 130000, qty: 0 }
+        { id: 1, gender: 'boy', title: '👕 Поло/Финка', price: 120000, sizes: ['28', '30', '32', '34', '36', '38', '40', '42'], colors: ['Белый', 'Тёмно-синий'], size: '32', color: 'Белый', qty: 0 },
+        { id: 2, gender: 'boy', title: '🧥 Пиджак школьный', price: 400000, sizes: ['30', '32', '34', '36', '38', '40', '42', '44'], colors: ['Тёмно-синий'], size: '34', color: 'Тёмно-синий', qty: 0 },
+        { id: 3, gender: 'boy', title: '👖 Брюки классические', price: 200000, sizes: ['28', '30', '32', '34', '36', '38', '40'], colors: ['Тёмно-синий', 'Черный'], size: '32', color: 'Тёмно-синий', qty: 0 },
+        { id: 4, gender: 'boy', title: '👔 Рубашка классическая', price: 130000, sizes: ['30', '32', '34', '36', '38', '40'], colors: ['Белая'], size: '32', color: 'Белая', qty: 0 },
+        
+        { id: 5, gender: 'girl', title: '👕 Поло/Финка женская', price: 120000, sizes: ['28', '30', '32', '34', '36', '38', '40'], colors: ['Белый', 'Тёмно-синий'], size: '32', color: 'Белый', qty: 0 },
+        { id: 6, gender: 'girl', title: '🧥 Пиджак женский', price: 400000, sizes: ['30', '32', '34', '36', '38', '40', '42'], colors: ['Тёмно-синий'], size: '34', color: 'Тёмно-синий', qty: 0 },
+        { id: 7, gender: 'girl', title: '👗 Юбка / Сарафан', price: 180000, sizes: ['28', '30', '32', '34', '36', '38'], colors: ['Тёмно-синий'], size: '32', color: 'Тёмно-синий', qty: 0 },
+        { id: 8, gender: 'girl', title: '👔 Рубашка женская', price: 130000, sizes: ['30', '32', '34', '36', '38', '40'], colors: ['Белая'], size: '32', color: 'Белая', qty: 0 }
     ];
 
     let currentGender = 'boy';
@@ -78,22 +80,43 @@
         list.innerHTML = '';
         
         products.filter(p => p.gender === currentGender).forEach(p => {
-            const priceText = p.price > 0 ? `${p.price.toLocaleString()} сум` : 'Уточняется';
+            const sizeOptions = p.sizes.map(s => `<option value="${s}" ${p.size === s ? 'selected' : ''}>${s}</option>`).join('');
+            const colorOptions = p.colors.map(c => `<option value="${c}" ${p.color === c ? 'selected' : ''}>${c}</option>`).join('');
+
             list.innerHTML += `
                 <div class="product-card">
-                    <div class="product-info">
+                    <div class="product-header">
                         <div class="product-title">${p.title}</div>
-                        <div class="product-price">${priceText}</div>
+                        <div class="product-price">${p.price.toLocaleString()} сум</div>
                     </div>
-                    <div class="counter">
-                        <button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button>
-                        <span class="qty-val">${p.qty}</span>
-                        <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
+                    
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label>Размер</label>
+                            <select class="option-select" onchange="updateOption(${p.id}, 'size', this.value)">
+                                ${sizeOptions}
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>Цвет</label>
+                            <select class="option-select" onchange="updateOption(${p.id}, 'color', this.value)">
+                                ${colorOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card-bottom">
+                        <span style="font-size: 12px; color: #64748b;">Количество:</span>
+                        <div class="counter">
+                            <button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button>
+                            <span class="qty-val">${p.qty}</span>
+                            <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
+                        </div>
                     </div>
                 </div>
             `;
         });
-        updateTotal();
+        updateMainButton();
     }
 
     function filterGender(gender) {
@@ -101,6 +124,11 @@
         document.getElementById('btn-boy').classList.toggle('active', gender === 'boy');
         document.getElementById('btn-girl').classList.toggle('active', gender === 'girl');
         renderProducts();
+    }
+
+    function updateOption(id, key, value) {
+        const product = products.find(p => p.id === id);
+        if (product) product[key] = value;
     }
 
     function changeQty(id, delta) {
@@ -111,30 +139,44 @@
         }
     }
 
-    function updateTotal() {
-        const total = products.reduce((sum, p) => sum + (p.price * p.qty), 0);
-        document.getElementById('total-price').innerText = `${total.toLocaleString()} сум`;
+    function updateMainButton() {
+        const cart = products.filter(p => p.qty > 0);
+        if (cart.length > 0) {
+            const total = cart.reduce((sum, p) => sum + (p.price * p.qty), 0);
+            tg.MainButton.setText(`ОФОРМИТЬ ЗАКАЗ (${total.toLocaleString()} сум)`);
+            tg.MainButton.show();
+        } else {
+            tg.MainButton.hide();
+        }
     }
 
-    function sendOrder() {
+    tg.MainButton.onClick(() => {
         const cart = products.filter(p => p.qty > 0);
+        const name = document.getElementById('cust-name').value.trim();
+        const phone = document.getElementById('cust-phone').value.trim();
+
         if (cart.length === 0) {
-            alert("Выберите хотя бы один товар!");
+            tg.showAlert("Выберите хотя бы один товар!");
             return;
         }
-        
-        try {
-            tg.sendData(JSON.stringify(cart));
-            tg.close();
-        } catch (e) {
-            alert("Открывать нужно внутри Telegram-бота!");
+        if (!name || !phone) {
+            tg.showAlert("Пожалуйста, заполните Имя и Номер телефона!");
+            return;
         }
-    }
 
-    renderProducts();
-</script>
-</body>
-</html>
+        const payload = {
+            customer: { name, phone },
+            items: cart.map(p => ({
+                title: p.title,
+                size: p.size,
+                color: p.color,
+                qty: p.qty,
+                price: p.price
+            }))
+        };
+
+        tg.sendData(JSON.stringify(payload));
+    });
 
     renderProducts();
 </script>
